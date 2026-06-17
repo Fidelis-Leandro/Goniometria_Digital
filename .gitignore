@@ -21,3 +21,6 @@ Thumbs.db
 # IDEs
 .vscode/
 .idea/
+
+*.pdf
+unicode_issues.txt

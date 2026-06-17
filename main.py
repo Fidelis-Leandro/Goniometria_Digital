@@ -23,6 +23,7 @@ S : salvar frame atual como PNG
 Q / ESC : encerrar
 """
 
+import os
 import sys
 import time
 from pathlib import Path
@@ -41,6 +42,7 @@ from goniometry import DigitalGoniometer
 from smoothing import GoniometryFilterBank
 from goniometry_overlay import draw_goniometry_overlay, compose_side_by_side
 from goniometry_csv import GoniometryCSVLogger
+from session_report import generate_pdf_report
 
 # =============================================================================
 # CONFIGURAÇÕES DO MODO FALLBACK
@@ -344,6 +346,64 @@ def run() -> None:
 
         print(f"\n  Sessão encerrada. CSV salvo em: {csv_path}")
         print(f"  Total de frames processados: {frame_id}")
+
+    # Oferece geração de relatório PDF após encerrar a sessão.
+    _offer_report_generation(csv_path)
+
+
+def _offer_report_generation(csv_path: str) -> None:
+    """
+    Após a sessão, pergunta ao usuário se deseja gerar o relatório PDF.
+
+    Coleta nome do paciente, lado avaliado e caminho do logo via terminal.
+    """
+    print()
+    print("=" * 60)
+    print("  GERADOR DE RELATÓRIO PDF")
+    print("=" * 60)
+
+    try:
+        resposta = input("\n  Deseja gerar o relatório PDF da sessão? (S/N): ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print("\n  Relatório não gerado.")
+        return
+
+    if resposta.upper() not in ("S", "SIM", "Y", "YES"):
+        print("  Relatório não gerado.")
+        return
+
+    # Coleta dados do paciente
+    try:
+        patient_name = input("  Nome completo do paciente: ").strip()
+        side = input("  Lado avaliado (Direito/Esquerdo): ").strip()
+        logo_input = input("  Caminho do logo (Enter para pular): ").strip()
+    except (EOFError, KeyboardInterrupt):
+        patient_name = ""
+        side = ""
+        logo_input = ""
+
+    logo_path = logo_input if logo_input and os.path.isfile(logo_input) else None
+
+    # Verifica se existe um logo padrão na pasta assets
+    if logo_path is None:
+        default_logo = os.path.join("assets", "logo_ufcspa.png")
+        if os.path.isfile(default_logo):
+            logo_path = default_logo
+            print(f"  Logo encontrado automaticamente: {default_logo}")
+
+    print()
+    try:
+        pdf_path = generate_pdf_report(
+            csv_path=csv_path,
+            patient_name=patient_name,
+            side=side,
+            logo_path=logo_path,
+        )
+        print(f"\n  PDF pronto! Abra o arquivo: {pdf_path}")
+    except Exception as e:
+        print(f"\n  ERRO ao gerar relatório: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 # =============================================================================
