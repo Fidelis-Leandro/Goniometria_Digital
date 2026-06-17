@@ -1,30 +1,50 @@
 """
-goniometry_csv.py — Registro de Sessão Goniométrica em CSV
-============================================================
-Grava uma linha por frame com timestamp ISO-8601 e todos os ângulos calculados.
-Modo append: não sobrescreve sessões anteriores.
+goniometry_csv.py — Registro da sessão goniométrica em CSV
+==========================================================
 
-Uso:
-    logger = GoniometryCSVLogger("session_goniometry.csv")
-    logger.log(frame_id=42, angles=gonio.compute_all(landmarks))
-    logger.close()
+Este módulo grava uma linha por frame com:
+- timestamp;
+- frame_id;
+- ângulos suavizados por dedo e articulação.
+
+O logger é usado durante a sessão do app Streamlit
+e pode ser aberto uma vez no início e fechado ao final.
 """
 
 import csv
 import os
-from datetime import datetime
-from typing import Dict, Any
+import time
+from typing import Any, Dict
 
-
-# ─── Cabeçalho do CSV (ordem canônica) ────────────────────────────────────────
+# =============================================================================
+# CABEÇALHO CANÔNICO DO CSV
+# =============================================================================
 
 CSV_FIELDS = [
-    "timestamp", "frame_id",
-    "INDEX_MCP",  "INDEX_PIP",  "INDEX_DIP",  "INDEX_ABD",  "INDEX_TAM",
-    "MIDDLE_MCP", "MIDDLE_PIP", "MIDDLE_DIP", "MIDDLE_ABD", "MIDDLE_TAM",
-    "RING_MCP",   "RING_PIP",   "RING_DIP",   "RING_ABD",   "RING_TAM",
-    "PINKY_MCP",  "PINKY_PIP",  "PINKY_DIP",  "PINKY_ABD",  "PINKY_TAM",
-    "THUMB_MCP",  "THUMB_IP",
+    "timestamp",
+    "frame_id",
+    "INDEX_MCP",
+    "INDEX_PIP",
+    "INDEX_DIP",
+    "INDEX_ABD",
+    "INDEX_TAM",
+    "MIDDLE_MCP",
+    "MIDDLE_PIP",
+    "MIDDLE_DIP",
+    "MIDDLE_ABD",
+    "MIDDLE_TAM",
+    "RING_MCP",
+    "RING_PIP",
+    "RING_DIP",
+    "RING_ABD",
+    "RING_TAM",
+    "PINKY_MCP",
+    "PINKY_PIP",
+    "PINKY_DIP",
+    "PINKY_ABD",
+    "PINKY_TAM",
+    "THUMB_MCP",
+    "THUMB_IP",
 ]
 
 
@@ -32,10 +52,8 @@ class GoniometryCSVLogger:
     """
     Logger de sessão goniométrica.
 
-    Parâmetros
-    ----------
-    filepath : str
-        Caminho do arquivo CSV. Se já existir, faz append (preserva histórico).
+    O arquivo é aberto em modo append para preservar histórico quando desejado.
+    O cabeçalho é escrito apenas se o arquivo ainda não existir ou estiver vazio.
     """
 
     def __init__(self, filepath: str = "session_goniometry.csv"):
@@ -44,28 +62,22 @@ class GoniometryCSVLogger:
         self._file = open(filepath, "a", newline="", encoding="utf-8")
         self._writer = csv.DictWriter(self._file, fieldnames=CSV_FIELDS)
 
-        # Escreve cabeçalho apenas se arquivo estiver vazio / novo
         if not self._file_exists:
             self._writer.writeheader()
             self._file.flush()
 
     def log(self, frame_id: int, angles: Dict[str, Dict[str, float]]) -> None:
         """
-        Registra um frame no CSV.
+        Escreve uma linha correspondente a um frame processado.
 
-        Parâmetros
-        ----------
-        frame_id : int
-            Identificador sequencial do frame.
-        angles : dict
-            Saída de DigitalGoniometer.compute_all() — formato canônico.
+        O módulo espera o dicionário no mesmo formato retornado por:
+        DigitalGoniometer.compute_all() / GoniometryFilterBank.smooth_all()
         """
         row: Dict[str, Any] = {
-            "timestamp": datetime.now().isoformat(timespec="milliseconds"),
-            "frame_id":  frame_id,
+            "timestamp": time.time(),
+            "frame_id": frame_id,
         }
 
-        # Dedos com MCP/PIP/DIP/ABD/TAM
         for finger in ("INDEX", "MIDDLE", "RING", "PINKY"):
             data = angles.get(finger, {})
             row[f"{finger}_MCP"] = round(data.get("MCP", 0.0), 2)
@@ -74,20 +86,23 @@ class GoniometryCSVLogger:
             row[f"{finger}_ABD"] = round(data.get("ABD", 0.0), 2)
             row[f"{finger}_TAM"] = round(data.get("TAM", 0.0), 2)
 
-        # Polegar
         thumb = angles.get("THUMB", {})
         row["THUMB_MCP"] = round(thumb.get("MCP", 0.0), 2)
-        row["THUMB_IP"]  = round(thumb.get("IP",  0.0), 2)
+        row["THUMB_IP"] = round(thumb.get("IP", 0.0), 2)
 
         self._writer.writerow(row)
 
     def flush(self) -> None:
-        """Força escrita no disco (útil para monitoramento em tempo real)."""
+        """
+        Força a escrita em disco do buffer do arquivo.
+        """
         self._file.flush()
 
     def close(self) -> None:
-        """Fecha o arquivo CSV. Chamar ao encerrar a sessão."""
-        if self._file and not self._file.closed:
+        """
+        Fecha o arquivo CSV de forma segura.
+        """
+        if hasattr(self, "_file") and self._file and not self._file.closed:
             self._file.flush()
             self._file.close()
 
@@ -98,4 +113,5 @@ class GoniometryCSVLogger:
         self.close()
 
     def __del__(self):
-        self.close()
+        if hasattr(self, "_file"):
+            self.close()
