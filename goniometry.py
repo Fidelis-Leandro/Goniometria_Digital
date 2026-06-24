@@ -45,6 +45,7 @@ NORMAL_RANGES: Dict[str, tuple] = {
     "TAM":       (250.0, 270.0),
     "THUMB_MCP": (50.0, 60.0),
     "THUMB_IP":  (70.0, 90.0),
+    "THUMB_TAM": (100.0, 130.0),
 }
 
 TAM_CLASSIFICATION = [
@@ -52,6 +53,13 @@ TAM_CLASSIFICATION = [
     (195.0, 260.0, "Bom", (40, 200, 255)),
     (130.0, 195.0, "Razoável", (50, 130, 255)),
     (0.0, 130.0, "Ruim", (60, 60, 255)),
+]
+
+TAM_CLASSIFICATION_THUMB = [
+    (110.0, float("inf"), "Excelente", (50, 220, 130)),
+    (80.0,  110.0,        "Bom",       (40, 200, 255)),
+    (50.0,   80.0,        "Razoável",  (50, 130, 255)),
+    (0.0,    50.0,        "Ruim",      (60, 60, 255)),
 ]
 
 
@@ -113,10 +121,50 @@ def _hand_normal(landmarks: List[Any], is_right_hand: bool = True) -> np.ndarray
     v1 = mcp_index - wrist
     v2 = mcp_pinky - wrist
 
-    normal = _normalize(np.cross(v1, v2))
+    normal = _normalize(np.cross(v2, v1))
     if not is_right_hand:
         normal = -normal
     return normal
+
+
+def _thumb_local_normal(landmarks: List[Any], hand_normal: np.ndarray) -> np.ndarray:
+    """
+    Normal estável para o plano de movimento do polegar.
+
+    Derivado únicamente do eixo do metacarpo do polegar (CMC→MCP) e do
+    normal dorsal da mão. Por usar só CMC e MCP — não IP nem TIP — é
+    completamente independente da posição articular atual do polegar.
+    Isso elimina a dependência circular que causava inversão de sinal
+    durante a flexão.
+
+    Convenção de sinal resultante:
+    - Flexão em direção à palma → positivo
+    - Extensão / abdução para fora → zero ou negativo
+
+    Parâmetros:
+        landmarks   : lista de 21 landmarks do MediaPipe.
+        hand_normal : normal dorsal correto (já ajustado por is_right_hand)
+                      proveniente de _hand_normal() em compute_all().
+    """
+    cmc = _lm_to_array(landmarks[THUMB_CMC])
+    mcp = _lm_to_array(landmarks[THUMB_MCP])
+
+    # Eixo do metacarpo do polegar — estável, não muda com flexão MCP/IP.
+    thumb_shaft = _normalize(mcp - cmc)
+
+    # Direção palmar = oposta ao normal dorsal.
+    palmar = -hand_normal
+
+    # cross(eixo_polegar, palmar) produz o vetor perpendicular ao eixo
+    # que aponta na direção que define flexão palmar como positiva.
+    raw = np.cross(thumb_shaft, palmar)
+
+    norm_mag = np.linalg.norm(raw)
+    if norm_mag < 1e-9:
+        # Fallback: polegar paralelo ao normal da mão (pose anatomicamente extrema).
+        return hand_normal
+
+    return _normalize(raw)
 
 
 # =============================================================================
@@ -223,25 +271,63 @@ class DigitalGoniometer:
         deficit_sum = abs(min(mcp, 0.0)) + abs(min(pip, 0.0)) + abs(min(dip, 0.0))
         return max(0.0, flex_sum - deficit_sum)
 
+    def total_active_motion_thumb(self, mcp: float, ip: float) -> float:
+        """
+        TAM do polegar: soma de MCP + IP com protocolo clínico ASSH adaptado.
+
+        Anatomia diferente — o polegar tem apenas duas articulações móveis:
+          - MCP: normal 50–60°
+          - IP:  normal 70–90°
+        TAM máximo esperado: ~120–130° (flexão plena do polegar).
+        Valores negativos (déficit de extensão) subtraem do total.
+        """
+        flex_sum    = max(0.0, mcp) + max(0.0, ip)
+        deficit_sum = abs(min(0.0, mcp)) + abs(min(0.0, ip))
+        return max(0.0, flex_sum - deficit_sum)
+
     def thumb_mcp_flex(self, landmarks: List[Any], normal: np.ndarray) -> float:
         """
-        Calcula flexão do MCP do polegar.
+        Flexão do MCP do polegar usando normal LOCAL estável.
+
+        Braço estacionário = THUMB_CMC → THUMB_MCP (metacarpo)
+        Braço móvel        = THUMB_MCP → THUMB_IP  (falange proximal)
+
+        O normal do plano de movimento é calculado por `_thumb_local_normal()`
+        que usa apenas CMC, MCP e o normal dorsal da mão — sem depender
+        de IP ou TIP. Isso elimina a dependência circular que anteriormente
+        invertia o sinal durante a flexão palmar.
+
+        Esperado:
+        - Polegar fletido para a palma (oposição): +40° a +60°
+        - Polegar estendido/abduzido para fora   : próximo de 0° ou negativo
         """
         cmc = _lm_to_array(landmarks[THUMB_CMC])
         mcp = _lm_to_array(landmarks[THUMB_MCP])
-        ip = _lm_to_array(landmarks[THUMB_IP])
+        ip  = _lm_to_array(landmarks[THUMB_IP])
 
-        return angle_between_vectors_3d(mcp - cmc, ip - mcp, normal)
+        # Passa o normal dorsal correto (com handedness) para o cálculo local.
+        thumb_normal = _thumb_local_normal(landmarks, normal)
+        return angle_between_vectors_3d(mcp - cmc, ip - mcp, thumb_normal)
 
     def thumb_ip_flex(self, landmarks: List[Any], normal: np.ndarray) -> float:
         """
-        Calcula flexão da IP do polegar.
+        Flexão da articulação IP do polegar usando normal LOCAL estável.
+
+        Braço estacionário = THUMB_MCP → THUMB_IP  (falange proximal)
+        Braço móvel        = THUMB_IP  → THUMB_TIP (falange distal)
+
+        Usa o mesmo normal local do MCP para manter convenção consistente.
+
+        Esperado:
+        - IP fletido (ponta do polegar curva para palma): +70° a +90°
+        - IP estendido                                  : próximo de 0°
         """
         mcp = _lm_to_array(landmarks[THUMB_MCP])
-        ip = _lm_to_array(landmarks[THUMB_IP])
+        ip  = _lm_to_array(landmarks[THUMB_IP])
         tip = _lm_to_array(landmarks[THUMB_TIP])
 
-        return angle_between_vectors_3d(ip - mcp, tip - ip, normal)
+        thumb_normal = _thumb_local_normal(landmarks, normal)
+        return angle_between_vectors_3d(ip - mcp, tip - ip, thumb_normal)
 
     def compute_all(
         self,
@@ -283,19 +369,30 @@ class DigitalGoniometer:
                 "TAM": round(tam, 2),
             }
 
+        thumb_mcp = round(self.thumb_mcp_flex(landmarks, normal), 2)
+        thumb_ip  = round(self.thumb_ip_flex(landmarks, normal), 2)
+        thumb_tam = self.total_active_motion_thumb(thumb_mcp, thumb_ip)
+
         result["THUMB"] = {
-            "MCP": round(self.thumb_mcp_flex(landmarks, normal), 2),
-            "IP":  round(self.thumb_ip_flex(landmarks, normal), 2),
+            "MCP": thumb_mcp,
+            "IP":  thumb_ip,
+            "TAM": round(thumb_tam, 2),
         }
 
         return result
 
     @staticmethod
-    def classify_tam(tam: float) -> Dict[str, object]:
+    def classify_tam(tam: float, is_thumb: bool = False) -> Dict[str, object]:
         """
         Classifica um valor de TAM conforme a referência funcional.
+
+        Parâmetros:
+            tam      : valor do TAM
+            is_thumb : se True, usa faixas adaptadas para o polegar
+                       (TAM máximo ~120° em vez de ~270°).
         """
-        for lo, hi, label, color_bgr in TAM_CLASSIFICATION:
+        table = TAM_CLASSIFICATION_THUMB if is_thumb else TAM_CLASSIFICATION
+        for lo, hi, label, color_bgr in table:
             if lo <= tam < hi:
                 return {
                     "label": label,
@@ -342,6 +439,7 @@ def is_in_normal_range(finger: str, metric: str, value: float) -> str:
         ("PINKY", "TAM"): "TAM",
         ("THUMB", "MCP"): "THUMB_MCP",
         ("THUMB", "IP"): "THUMB_IP",
+        ("THUMB", "TAM"): "THUMB_TAM",
     }
 
     range_key = key_map.get((finger, metric))

@@ -33,7 +33,7 @@ FINGER_JOINTS: Dict[str, Tuple[str, ...]] = {
     "MIDDLE": ("MCP", "PIP", "DIP", "ABD", "TAM"),
     "RING":   ("MCP", "PIP", "DIP", "ABD", "TAM"),
     "PINKY":  ("MCP", "PIP", "DIP", "ABD", "TAM"),
-    "THUMB":  ("MCP", "IP"),
+    "THUMB":  ("MCP", "IP", "TAM"),
 }
 
 
@@ -43,7 +43,7 @@ FINGER_JOINTS: Dict[str, Tuple[str, ...]] = {
 
 def assh_classify(tam: float) -> Tuple[str, str]:
     """
-    Classifica o TAM por faixas funcionais.
+    Classifica o TAM por faixas funcionais (dedos longos).
 
     Retorna:
         (label, color_hex)
@@ -59,6 +59,31 @@ def assh_classify(tam: float) -> Tuple[str, str]:
     if tam >= 195.0:
         return "Bom", "#eab308"
     if tam >= 130.0:
+        return "Moderado", "#f97316"
+    return "Ruim", "#ef4444"
+
+
+def assh_classify_thumb(tam: float) -> Tuple[str, str]:
+    """
+    Classifica o TAM do polegar por faixas funcionais adaptadas.
+
+    O polegar tem TAM máximo anatômico ~120–130° (MCP + IP),
+    portanto as faixas ASSH são proporcionalmente menores.
+
+    Retorna:
+        (label, color_hex)
+
+    Faixas:
+    - >= 110° : Excelente
+    - 80–109° : Bom
+    - 50–79°  : Moderado
+    - < 50°   : Ruim
+    """
+    if tam >= 110.0:
+        return "Excelente", "#22c55e"
+    if tam >= 80.0:
+        return "Bom", "#eab308"
+    if tam >= 50.0:
         return "Moderado", "#f97316"
     return "Ruim", "#ef4444"
 
@@ -121,12 +146,12 @@ def classify_hand_state(angles_smooth: Dict[str, Dict[str, float]]) -> Dict:
         if finger == "THUMB":
             mcp = float(finger_data.get("MCP", 0.0))
             ip  = float(finger_data.get("IP", 0.0))
-            # TAM proxy do polegar: soma das flexões positivas
-            tam = max(mcp, 0.0) + max(ip, 0.0)
-            closed = tam >= 80.0
+            tam = float(finger_data.get("TAM", 0.0))
+            # Threshold de fechado proporcional ao TAM máximo do polegar (~120°)
+            closed = tam >= 85.0
             if closed:
                 closed_count += 1
-            assh_label, assh_color = assh_classify(tam)
+            assh_label, assh_color = assh_classify_thumb(tam)
             finger_states[finger] = {
                 "MCP": mcp,
                 "IP": ip,
@@ -434,9 +459,9 @@ def compute_realtime_metrics(
             regularidade = "Irregular"
     else:
         cv = 0.0
-        # Retorna "\u2014" (indefinido) em vez de "Regular" para evitar falso positivo clínico.
+        # Retorna "-" (indefinido) em vez de "Regular" para evitar falso positivo clínico.
         # "Regular" com n_picos < 2 significa apenas ausência de dados, não boa coordenação.
-        regularidade = "\u2014"
+        regularidade = "-"
 
     return {
         "amplitude": float(amplitude),
@@ -529,11 +554,7 @@ def compute_session_metrics_from_buffers(
     results: Dict[str, Dict] = {}
 
     for finger in FINGERS:
-        # O polegar não tem buffer TAM — usa MCP como proxy de amplitude.
-        if finger == "THUMB":
-            tam_buffer = angle_buffers.get(finger, {}).get("MCP", [])
-        else:
-            tam_buffer = angle_buffers.get(finger, {}).get("TAM", [])
+        tam_buffer = angle_buffers.get(finger, {}).get("TAM", [])
         t_buffer = time_buffers.get(finger, [])
 
         results[finger] = compute_realtime_metrics(
@@ -579,7 +600,7 @@ def build_tam_chart_data(
         "MIDDLE": "TAM",
         "RING":   "TAM",
         "PINKY":  "TAM",
-        "THUMB":  "MCP",
+        "THUMB":  "TAM",
     }
 
     series: Dict[str, List] = {}

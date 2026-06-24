@@ -490,14 +490,15 @@ def _build_data_template(pw: int, ph: int) -> np.ndarray:
 
     lines = [
         "Ranges: MCP 85-90 | PIP 100-120 | DIP 60-80 | ABD 15-20",
-        "TAM: >=260 Excelente | 195-259 Bom | 130-194 Razoavel | <130 Ruim",
+        "TAM dedos: >=260 Excelente | 195-259 Bom | 130-194 Razoavel | <130 Ruim",
+        "TAM polegar (MCP+IP max~120): >=110 Exc | 80-109 Bom | 50-79 Raz | <50 Ruim",
     ]
     for i, line in enumerate(lines):
         y = fy + 4 + i * 14
         _center_text(canvas, line, y, pw, GRAY_LIGHT, 0.29)
 
     # Legenda de estabilidade.
-    y = fy + 4 + 2 * 14
+    y = fy + 4 + 3 * 14
     _put(canvas, "●", 14, y, STAB_STABLE, 0.30)
     _put(canvas, "Estavel", 26, y, GRAY_LIGHT, 0.28)
     _put(canvas, "●", 90, y, STAB_CONV, 0.30)
@@ -536,7 +537,11 @@ def _build_data_panel(
 
         # Bullet de cor (dinâmico — depende do status clínico).
         if finger == "THUMB":
-            checks = [("MCP", data.get("MCP", 0.0)), ("IP", data.get("IP", 0.0))]
+            checks = [
+                ("MCP", data.get("MCP", 0.0)),
+                ("IP", data.get("IP", 0.0)),
+                ("TAM", data.get("TAM", 0.0)),
+            ]
         else:
             checks = [
                 ("MCP", data.get("MCP", 0.0)),
@@ -579,8 +584,10 @@ def _build_data_panel(
 
         # Barra TAM (dinâmica).
         tam = data.get("TAM", 0.0)
-        tam_info = DigitalGoniometer.classify_tam(tam)
-        tam_pct = max(0.0, min(tam / 270.0, 1.0))
+        is_thumb = (finger == "THUMB")
+        tam_info = DigitalGoniometer.classify_tam(tam, is_thumb=is_thumb)
+        tam_max_ref = 130.0 if is_thumb else 270.0
+        tam_pct = max(0.0, min(tam / tam_max_ref, 1.0))
 
         bar_y = by + 52
         bar_x = _DATA_MARGIN_X + 42

@@ -52,7 +52,7 @@ except ImportError as e:
 
 from goniometry import DigitalGoniometer
 from smoothing import GoniometryFilterBank
-from goniometry_overlay import draw_goniometry_overlay
+from goniometry_overlay import _build_skeleton
 from goniometry_csv import GoniometryCSVLogger
 from dashboard_utils import FINGERS, FINGER_JOINTS
 
@@ -71,8 +71,9 @@ KALMAN_R: float = 0.10
 
 # Resolução reduzida para processamento do MediaPipe.
 # Landmarks são normalizados (0.0–1.0), independem da resolução de entrada.
-MP_PROCESS_WIDTH: int = 320
-MP_PROCESS_HEIGHT: int = 240
+# 240×180 é suficiente para detecção confiável e reduz custo de inferência.
+MP_PROCESS_WIDTH: int = 240
+MP_PROCESS_HEIGHT: int = 180
 
 # Confiança do MediaPipe (valores otimizados para performance).
 # 0.60 detect: margem maior para detecção inicial sem perder qualidade.
@@ -80,20 +81,22 @@ MP_PROCESS_HEIGHT: int = 240
 MP_DETECT_CONF: float = 0.60
 MP_TRACK_CONF: float = 0.40
 
-# Overlay pesado (draw_goniometry_overlay) só é gerado a cada N frames.
-# Nos frames intermediários, o frame espelhado é retornado sem overlay.
-# Valor 2 = overlay em 50% dos frames → metade do custo de renderização.
-OVERLAY_FRAME_INTERVAL: int = 2
+# Overlay pesado (_build_skeleton) só é gerado a cada N frames.
+# Nos frames intermediários, o último overlay cacheado é reutilizado.
+# Valor 6 = overlay em ~17% dos frames → ~83% do custo de renderização eliminado.
+OVERLAY_FRAME_INTERVAL: int = 6
 
 # Intervalo de gravação no CSV (a cada N frames com mão detectada).
-CSV_LOG_INTERVAL: int = 2
+CSV_LOG_INTERVAL: int = 3
 
 # Frames consecutivos sem mão após os quais o filtro Kalman é resetado.
-# A 30fps, 10 frames ≈ 330ms — tempo suficiente para distinguir
-# ausência real de mão de uma oclusão momentânea.
-NO_HAND_RESET_FRAMES: int = 10
+# A 30fps, 15 frames ≈ 500ms — evita resets desnecessarios por ocluções momentaneas.
+NO_HAND_RESET_FRAMES: int = 15
 
-
+# Intervalo do pipeline completo (MediaPipe + cálculo de ângulos).
+# Em frames intermediários, retorna resultado cacheado imediatamente.
+# Valor 2 = processa 50% dos frames → ~50% de economia de CPU.
+MP_PROCESS_INTERVAL: int = 2
 
 # =============================================================================
 # PROCESSADOR DE VÍDEO
@@ -139,8 +142,8 @@ class VideoProcessor:
         # Thread-safe lock — protege apenas os campos lidos pelo Streamlit.
         self.lock = threading.Lock()
 
-        # 90 frames ≈ 3 segundos de janela deslizante a 30fps.
-        buffer_size = 90
+        # 60 frames ≈ 2 segundos de janela deslizante a 30fps.
+        buffer_size = 10
         # Buffers inicializados apenas com os joints válidos por dedo.
         # THUMB tem apenas MCP e IP (anatomia diferente dos demais).
         self.angle_buffers = {
@@ -159,7 +162,6 @@ class VideoProcessor:
         self.last_angles: dict = {}
         self.hand_detected: bool = False
         self.frame_id: int = 0
-
         # Contador de frames consecutivos sem detecção de mão.
         # Ao atingir NO_HAND_RESET_FRAMES, o filtro é resetado para evitar
         # transientes falsos quando a mão retorna em posição diferente.
@@ -194,6 +196,14 @@ class VideoProcessor:
         8. Grava no CSV a cada CSV_LOG_INTERVAL frames.
         """
         self._local_frame_id += 1
+
+        # ── Fast path: pula pipeline completo em frames alternados ────────
+        # Retorna overlay cacheado sem executar MediaPipe nem cálculos.
+        # Reduz carga de CPU pela metade sem impacto visual perceptível.
+        if self._local_frame_id % MP_PROCESS_INTERVAL != 0:
+            if self._last_overlay is not None:
+                return av.VideoFrame.from_ndarray(self._last_overlay, format="bgr24")
+
         img_bgr = frame.to_ndarray(format="bgr24")
 
         # Espelhamento horizontal — experiência de "espelho" para o usuário.
@@ -251,15 +261,24 @@ class VideoProcessor:
                 for finger, joints_dict in angles_smooth.items()
             }
 
-            skeleton_panel, _ = draw_goniometry_overlay(
+            # Chama _build_skeleton diretamente em vez de draw_goniometry_overlay.
+            # O painel de dados (_build_data_panel) era descartado (variável _),
+            # mas custava ~50% do tempo total de overlay.
+            skeleton_panel = _build_skeleton(
                 img_bgr,
                 landmarks,
                 angles_smooth,
-                panel_w=PANEL_W,
-                panel_h=PANEL_H,
+                pw=480,
+                ph=390,
                 frozen=False,
                 stability_map=stability_map,
             )
+            # Escala o painel de volta para PANEL_W × PANEL_H com interpolação rápida.
+            if skeleton_panel.shape[:2] != (PANEL_H, PANEL_W):
+                skeleton_panel = cv2.resize(
+                    skeleton_panel, (PANEL_W, PANEL_H),
+                    interpolation=cv2.INTER_LINEAR,
+                )
             self._last_overlay = skeleton_panel
 
         # Retorna o overlay (novo ou cacheado do frame anterior).

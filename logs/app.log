@@ -1,0 +1,261 @@
+2026-06-23 09:51:07,852 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 09:51:10,140 | CRITICAL | app_pyqt | Falha fatal ao iniciar a aplicação: module 'mediapipe' has no attribute 'solutions'
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\app_pyqt.py", line 129, in main
+    window = MainWindow()
+             ^^^^^^^^^^^^
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 226, in __init__
+    self._create_workers()
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 305, in _create_workers
+    self.processing_worker = ProcessingWorker(parent=self)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\projetos\goniometria_digital\workers\processing_worker.py", line 206, in __init__
+    self._hands = mp.solutions.hands.Hands(
+                  ^^^^^^^^^^^^
+AttributeError: module 'mediapipe' has no attribute 'solutions'
+2026-06-23 09:59:55,676 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 09:59:56,972 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 09:59:57,321 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 10:00:26,477 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro Fidelis, mão=Direita, sessão=1, csv=logs\sessao_Leandro_Fidelis_20260623_100026_s1.csv
+2026-06-23 10:01:56,506 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_Fidelis_20260623_100026_s1.csv
+2026-06-23 10:02:20,341 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 10:02:20,469 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 10:04:04,605 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 10:04:05,421 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 10:04:05,599 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 10:04:23,225 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_100423_s1.csv
+2026-06-23 10:05:54,583 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_100423_s1.csv
+2026-06-23 10:06:09,208 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 10:06:09,291 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 10:10:34,397 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 10:10:35,395 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 10:10:35,552 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 10:10:43,446 | INFO | ui.main_window | Sessão iniciada: paciente=leandro, mão=Direita, sessão=1, csv=logs\sessao_leandro_20260623_101043_s1.csv
+2026-06-23 10:11:38,847 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_leandro_20260623_101043_s1.csv
+2026-06-23 10:11:42,436 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 10:11:42,550 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 10:15:29,708 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 10:15:30,339 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 10:15:30,483 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 10:16:07,022 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_101607_s1.csv
+2026-06-23 10:17:22,013 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_101607_s1.csv
+2026-06-23 10:21:35,777 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 10:21:36,812 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 10:21:37,088 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 10:22:09,328 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_102209_s1.csv
+2026-06-23 10:22:35,429 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_102209_s1.csv
+2026-06-23 10:22:44,792 | ERROR | ui.main_window | Falha ao gerar PDF: Character "—" at index 0 in text is outside the range of characters supported by the font used: "helvetica". Please consider using a Unicode font.
+Traceback (most recent call last):
+  File "C:\Users\Liliane\AppData\Local\Programs\Python\Python311\Lib\site-packages\fpdf\fpdf.py", line 5681, in normalize_text
+    return text.encode(self.core_fonts_encoding).decode("latin-1")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'latin-1' codec can't encode character '\u2014' in position 0: ordinal not in range(256)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 147, in run
+    pdf_path: str = generate_pdf_report(
+                    ^^^^^^^^^^^^^^^^^^^^
+  File "C:\projetos\goniometria_digital\session_report.py", line 985, in generate_pdf_report
+    _add_main_table(pdf, summary)
+  File "C:\projetos\goniometria_digital\session_report.py", line 800, in _add_main_table
+    pdf.cell(col_widths[i], row_h, val, border=1, align=align, fill=True)
+  File "C:\Users\Liliane\AppData\Local\Programs\Python\Python311\Lib\site-packages\fpdf\fpdf.py", line 281, in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Liliane\AppData\Local\Programs\Python\Python311\Lib\site-packages\fpdf\deprecation.py", line 36, in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Liliane\AppData\Local\Programs\Python\Python311\Lib\site-packages\fpdf\fpdf.py", line 3910, in cell
+    text = self.normalize_text(text)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Liliane\AppData\Local\Programs\Python\Python311\Lib\site-packages\fpdf\fpdf.py", line 5683, in normalize_text
+    raise FPDFUnicodeEncodingException(
+fpdf.errors.FPDFUnicodeEncodingException: Character "—" at index 0 in text is outside the range of characters supported by the font used: "helvetica". Please consider using a Unicode font.
+2026-06-23 10:23:00,252 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 10:23:00,325 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 10:27:36,004 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 10:27:37,026 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 10:27:37,180 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 10:28:01,072 | INFO | ui.main_window | Sessão iniciada: paciente=leandro, mão=Direita, sessão=1, csv=logs\sessao_leandro_20260623_102801_s1.csv
+2026-06-23 10:28:19,263 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_leandro_20260623_102801_s1.csv
+2026-06-23 10:29:22,765 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 10:29:22,878 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 11:01:49,554 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 11:01:51,281 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 11:01:51,615 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 11:02:17,049 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_110217_s1.csv
+2026-06-23 11:03:13,024 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_110217_s1.csv
+2026-06-23 11:07:55,848 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 11:07:55,909 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 11:17:17,461 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 11:17:18,634 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 11:17:18,937 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 11:17:39,851 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 11:17:39,852 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 11:20:48,535 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 11:20:49,589 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 11:20:49,776 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 11:21:41,274 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 717, in _iniciar_sessao
+    self.processing_worker.start_session(self._csv_path)
+  File "C:\projetos\goniometria_digital\workers\processing_worker.py", line 702, in start_session
+    with self._session_lock:
+         ^^^^^^^^^^^^^^^^^^
+AttributeError: 'ProcessingWorker' object has no attribute '_session_lock'
+2026-06-23 11:21:54,155 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 717, in _iniciar_sessao
+    self.processing_worker.start_session(self._csv_path)
+  File "C:\projetos\goniometria_digital\workers\processing_worker.py", line 702, in start_session
+    with self._session_lock:
+         ^^^^^^^^^^^^^^^^^^
+AttributeError: 'ProcessingWorker' object has no attribute '_session_lock'
+2026-06-23 11:22:09,292 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 717, in _iniciar_sessao
+    self.processing_worker.start_session(self._csv_path)
+  File "C:\projetos\goniometria_digital\workers\processing_worker.py", line 702, in start_session
+    with self._session_lock:
+         ^^^^^^^^^^^^^^^^^^
+AttributeError: 'ProcessingWorker' object has no attribute '_session_lock'
+2026-06-23 11:22:10,202 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 717, in _iniciar_sessao
+    self.processing_worker.start_session(self._csv_path)
+  File "C:\projetos\goniometria_digital\workers\processing_worker.py", line 702, in start_session
+    with self._session_lock:
+         ^^^^^^^^^^^^^^^^^^
+AttributeError: 'ProcessingWorker' object has no attribute '_session_lock'
+2026-06-23 11:22:20,275 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 11:22:20,276 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 11:23:52,629 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 11:23:53,687 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 11:23:53,883 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 11:24:55,102 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 11:24:55,855 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 11:24:56,026 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 11:25:09,312 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_112509_s1.csv
+2026-06-23 11:25:27,675 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_112509_s1.csv
+2026-06-23 11:25:39,309 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 654, in _nova_sessao
+    self.processing_worker.reset_state()
+  File "C:\projetos\goniometria_digital\workers\processing_worker.py", line 277, in reset_state
+    self._filter_bank.reset()
+    ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'GoniometryFilterBank' object has no attribute 'reset'
+2026-06-23 11:25:49,843 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 654, in _nova_sessao
+    self.processing_worker.reset_state()
+  File "C:\projetos\goniometria_digital\workers\processing_worker.py", line 277, in reset_state
+    self._filter_bank.reset()
+    ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'GoniometryFilterBank' object has no attribute 'reset'
+2026-06-23 11:26:01,526 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 11:26:01,638 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 11:27:57,431 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 11:27:58,600 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 11:27:58,782 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 11:28:15,197 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_112815_s1.csv
+2026-06-23 11:28:25,583 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_112815_s1.csv
+2026-06-23 11:28:29,150 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 664, in _nova_sessao
+    self.log_widget.log_info("Sistema reiniciado. Pronto para uma nova sessão.")
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'LogWidget' object has no attribute 'log_info'
+2026-06-23 11:28:45,407 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 664, in _nova_sessao
+    self.log_widget.log_info("Sistema reiniciado. Pronto para uma nova sessão.")
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'LogWidget' object has no attribute 'log_info'
+2026-06-23 11:31:22,353 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 11:31:22,985 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 11:31:23,170 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 11:31:42,426 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_113142_s1.csv
+2026-06-23 11:31:44,802 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_113142_s1.csv
+2026-06-23 11:31:47,403 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 664, in _nova_sessao
+    self.log_widget.log_info("Sistema reiniciado. Pronto para uma nova sessão.")
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'LogWidget' object has no attribute 'log_info'
+2026-06-23 11:32:16,008 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 664, in _nova_sessao
+    self.log_widget.log_info("Sistema reiniciado. Pronto para uma nova sessão.")
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'LogWidget' object has no attribute 'log_info'
+2026-06-23 11:32:25,690 | CRITICAL | sys.excepthook | Exceção Fatal Não Capturada:
+Traceback (most recent call last):
+  File "C:\projetos\goniometria_digital\ui\main_window.py", line 664, in _nova_sessao
+    self.log_widget.log_info("Sistema reiniciado. Pronto para uma nova sessão.")
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'LogWidget' object has no attribute 'log_info'
+2026-06-23 11:32:38,086 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 11:32:38,170 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 11:33:03,264 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 11:33:03,391 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 11:33:06,668 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 11:33:08,278 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 11:33:08,520 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 11:33:13,133 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 11:33:13,135 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 11:38:11,649 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 11:38:12,420 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 11:38:12,585 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 11:38:37,638 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_113837_s1.csv
+2026-06-23 11:39:01,788 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_113837_s1.csv
+2026-06-23 11:39:07,491 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_113907_s1.csv
+2026-06-23 11:39:22,332 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_113907_s1.csv
+2026-06-23 11:39:26,425 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_113926_s1.csv
+2026-06-23 11:39:46,078 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_113926_s1.csv
+2026-06-23 11:39:48,364 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 11:39:48,477 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 13:06:38,276 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 13:06:39,312 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 13:06:39,578 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 13:07:44,371 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_130744_s1.csv
+2026-06-23 13:08:36,104 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_130744_s1.csv
+2026-06-23 13:08:57,664 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 13:08:57,726 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 13:11:10,814 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 13:11:14,012 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 13:11:14,226 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 13:11:52,376 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_131152_s1.csv
+2026-06-23 13:13:33,979 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_131152_s1.csv
+2026-06-23 13:14:28,873 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 13:14:28,965 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 14:23:11,209 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 14:23:12,703 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 14:23:12,966 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 14:26:36,688 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_142636_s1.csv
+2026-06-23 14:28:18,214 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_142636_s1.csv
+2026-06-23 14:33:34,461 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 14:33:34,530 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 14:34:07,302 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 14:34:08,924 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 14:34:09,325 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 14:34:24,607 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro FIdelis, mão=Direita, sessão=1, csv=logs\sessao_Leandro_FIdelis_20260623_143424_s1.csv
+2026-06-23 14:35:06,535 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_FIdelis_20260623_143424_s1.csv
+2026-06-23 14:55:59,726 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 14:56:00,318 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 14:56:19,499 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 14:56:21,296 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 14:56:21,674 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 14:57:50,114 | INFO | ui.main_window | Sessão iniciada: paciente=Leandro, mão=Direita, sessão=1, csv=logs\sessao_Leandro_20260623_145750_s1.csv
+2026-06-23 14:58:37,174 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_Leandro_20260623_145750_s1.csv
+2026-06-23 15:00:13,143 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 15:00:13,214 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 15:00:20,876 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 15:00:22,124 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 15:00:22,462 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 15:00:51,926 | INFO | ui.main_window | Sessão iniciada: paciente=richard, mão=Direita, sessão=1, csv=logs\sessao_richard_20260623_150051_s1.csv
+2026-06-23 15:01:55,830 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_richard_20260623_150051_s1.csv
+2026-06-23 15:15:45,662 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 15:15:45,832 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.

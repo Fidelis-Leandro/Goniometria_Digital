@@ -45,6 +45,7 @@ CSV_FIELDS = [
     "PINKY_TAM",
     "THUMB_MCP",
     "THUMB_IP",
+    "THUMB_TAM",
 ]
 
 
@@ -89,6 +90,7 @@ class GoniometryCSVLogger:
         thumb = angles.get("THUMB", {})
         row["THUMB_MCP"] = round(thumb.get("MCP", 0.0), 2)
         row["THUMB_IP"] = round(thumb.get("IP", 0.0), 2)
+        row["THUMB_TAM"] = round(thumb.get("TAM", 0.0), 2)
 
         self._writer.writerow(row)
 

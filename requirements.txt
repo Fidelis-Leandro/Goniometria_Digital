@@ -3,12 +3,24 @@
 # Python 3.10 ou 3.11 obrigatório (limitação do MediaPipe)
 # =============================================================================
 
-# Interface e WebRTC
+# =============================================================================
+# COMANDOS DE EXECUÇÃO:
+# Interface PyQt6 (nova)   : python app_pyqt.py
+# Interface Streamlit (leg): streamlit run app.py
+# Fallback OpenCV (teste)  : python main.py
+# =============================================================================
+
+# Interface e WebRTC (Legado para app.py / main.py)
 streamlit>=1.35.0
 streamlit-webrtc==0.71.0
 
+# Nova Interface Desktop (app_pyqt.py)
+PyQt6>=6.6.0
+pyqtgraph>=0.13.0
+psutil>=5.9.0
+
 # Visão computacional e detecção de landmarks
-mediapipe>=0.10.11
+mediapipe>=0.10.11,<0.10.18
 opencv-python>=4.9.0.80
 
 # Codecs de vídeo (WebRTC exige o pacote av/PyAV)

@@ -35,9 +35,16 @@ from fpdf import FPDF
 from dashboard_utils import (
     FINGER_JOINTS,
     FINGERS,
-    assh_classify,
     _detect_peaks,
     _detect_valleys,
+)
+
+from clinical_classification import (
+    classify_articular_tam,
+    detect_valid_repetitions,
+    classify_functional_session,
+    classify_final_session_result,
+    generate_clinical_observation_text,
 )
 
 # =============================================================================
@@ -64,6 +71,7 @@ ASSH_COLORS_RGB: Dict[str, Tuple[int, int, int]] = {
     "Excelente": (34, 197, 94),
     "Bom":       (234, 179, 8),
     "Moderado":  (249, 115, 22),
+    "Regular":   (249, 115, 22),
     "Ruim":      (239, 68, 68),
 }
 
@@ -155,10 +163,17 @@ def load_session_csv(csv_path: str) -> Dict[str, Any]:
 
             fingers_data["THUMB"]["MCP"].append(thumb_mcp)
             fingers_data["THUMB"]["IP"].append(thumb_ip)
-            # TAM do polegar = soma das flexões positivas
-            fingers_data["THUMB"]["TAM"].append(
-                max(thumb_mcp, 0.0) + max(thumb_ip, 0.0)
-            )
+
+            try:
+                thumb_tam = float(row.get("THUMB_TAM", 0.0))
+            except (ValueError, TypeError):
+                thumb_tam = 0.0
+
+            # Fallback: se CSV antigo não tiver THUMB_TAM, calcula
+            if thumb_tam < 0.01 and (thumb_mcp > 0.01 or thumb_ip > 0.01):
+                thumb_tam = max(thumb_mcp, 0.0) + max(thumb_ip, 0.0)
+                
+            fingers_data["THUMB"]["TAM"].append(thumb_tam)
 
     session_start = timestamps[0] if timestamps else 0.0
     session_end = timestamps[-1] if timestamps else 0.0
@@ -271,10 +286,29 @@ def compute_session_summary(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
                 regularidade = "Irregular"
         else:
             cv = 0.0
-            regularidade = "\u2014"  # indeterminado
+            regularidade = "-"  # indeterminado
 
-        # Classificação ASSH pelo TAM médio
-        assh_label, assh_color = assh_classify(tam_medio)
+        # Classificações Híbridas
+        articular_class = classify_articular_tam(finger, tam_max)
+        
+        realtime_metrics_for_hybrid = {
+            "amplitude": amplitude,
+            "vel_media": vel_media,
+            "vel_pico": vel_pico,
+            "freq_hz": freq_hz,
+            "cv": cv,
+            "regularidade": regularidade,
+        }
+        
+        repetition_stats = detect_valid_repetitions(tam_values, timestamps, finger)
+        
+        functional_class = classify_functional_session(
+            finger, articular_class, repetition_stats, realtime_metrics_for_hybrid
+        )
+        
+        hybrid_class = classify_final_session_result(
+            finger, articular_class, functional_class, repetition_stats
+        )
 
         # Médias articulares
         joint_means: Dict[str, float] = {}
@@ -293,9 +327,10 @@ def compute_session_summary(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
             "freq_hz": round(freq_hz, 2),
             "regularidade": regularidade,
             "cv": round(cv, 3),
-            "assh_label": assh_label,
-            "assh_color": assh_color,
             "n_picos": n_picos,
+            "articular_class": articular_class,
+            "functional_class": functional_class,
+            "hybrid_class": hybrid_class,
         }
 
         # Adiciona médias articulares específicas
@@ -323,11 +358,12 @@ def _empty_finger_summary(finger: str) -> Dict[str, Any]:
         "vel_media": 0.0,
         "vel_pico": 0.0,
         "freq_hz": 0.0,
-        "regularidade": "\u2014",
+        "regularidade": "-",
         "cv": 0.0,
-        "assh_label": "Ruim",
-        "assh_color": "#ef4444",
         "n_picos": 0,
+        "articular_class": {"label": "Ruim", "color": "#ef4444"},
+        "functional_class": {"label": "Ruim", "color": "#ef4444"},
+        "hybrid_class": {"label": "Ruim", "color": "#ef4444", "explanation": "Ausência de dados para análise."},
     }
     if finger == "THUMB":
         entry["mcp_medio"] = 0.0
@@ -445,91 +481,23 @@ def generate_individual_plots(data: Dict[str, Any], output_dir: str) -> Dict[str
 # =============================================================================
 
 def build_clinical_observation(summary: Dict[str, Dict[str, Any]]) -> str:
-    """
-    Gera texto interpretativo automático com base nas métricas da sessão.
-
-    Analisa: melhor/pior dedo, regularidade, velocidade, amplitude, assimetria.
-    """
-    observations: List[str] = []
-
-    # Filtra dedos com dados válidos
+    """Gera texto interpretativo geral da sessão com base na classificação híbrida global."""
     valid = {f: s for f, s in summary.items() if s["tam_medio"] > 0.01}
     if not valid:
         return "Dados insuficientes para gerar observação clínica."
-
-    # Melhor e pior dedo por TAM médio
-    sorted_by_tam = sorted(valid.items(), key=lambda x: x[1]["tam_medio"], reverse=True)
-    best_finger = sorted_by_tam[0]
-    worst_finger = sorted_by_tam[-1]
-
-    if len(sorted_by_tam) >= 2:
-        observations.append(
-            f"O dedo {FINGER_LABELS[best_finger[0]].lower()} apresentou o melhor "
-            f"desempenho funcional da sessão (TAM médio: {best_finger[1]['tam_medio']:.1f}°, "
-            f"classificação ASSH: {best_finger[1]['assh_label']})."
-        )
-        if worst_finger[0] != best_finger[0]:
-            observations.append(
-                f"O dedo {FINGER_LABELS[worst_finger[0]].lower()} apresentou o menor "
-                f"TAM médio ({worst_finger[1]['tam_medio']:.1f}°), com classificação "
-                f"ASSH: {worst_finger[1]['assh_label']}."
-            )
-
-    # Amplitude reduzida (< 30°)
-    low_amplitude = [
-        FINGER_LABELS[f].lower()
-        for f, s in valid.items()
-        if s["amplitude"] < 30.0
-    ]
-    if low_amplitude:
-        nomes = ", ".join(low_amplitude)
-        observations.append(
-            f"Amplitude reduzida nos dedos: {nomes}."
-        )
-
-    # Velocidade média baixa (< 20°/s)
-    low_speed = [
-        FINGER_LABELS[f].lower()
-        for f, s in valid.items()
-        if s["vel_media"] < 20.0
-    ]
-    if len(low_speed) >= 3:
-        observations.append(
-            "Baixa velocidade média durante a sessão na maioria dos dedos."
-        )
-    elif low_speed:
-        nomes = ", ".join(low_speed)
-        observations.append(
-            f"Baixa velocidade média nos dedos: {nomes}."
-        )
-
-    # Irregularidade
-    irregular = [
-        FINGER_LABELS[f].lower()
-        for f, s in valid.items()
-        if s["regularidade"] == "Irregular"
-    ]
-    if irregular:
-        nomes = ", ".join(irregular)
-        observations.append(
-            f"Padrão irregular de movimento observado nos dedos: {nomes}."
-        )
-
-    # Regularidade geral boa
-    regular_count = sum(
-        1 for s in valid.values() if s["regularidade"] == "Regular"
-    )
-    if regular_count >= 4:
-        observations.append(
-            "Padrão de movimento globalmente regular e consistente."
-        )
-
-    if not observations:
-        observations.append(
-            "Sessão realizada dentro dos parâmetros esperados."
-        )
-
-    return " ".join(observations)
+    
+    ranks = {"Excelente": 4, "Bom": 3, "Regular": 2, "Ruim": 1}
+    worst_label = "Excelente"
+    worst_rank = 4
+    
+    for s in valid.values():
+        label = s["hybrid_class"]["label"]
+        rank = ranks.get(label, 1)
+        if rank < worst_rank:
+            worst_rank = rank
+            worst_label = label
+            
+    return generate_clinical_observation_text({"label": worst_label})
 
 
 def _build_interpretation(summary: Dict[str, Dict[str, Any]]) -> str:
@@ -720,7 +688,7 @@ def _add_main_table(
 
     headers = [
         "Dedo", "TAM\nfinal", "TAM\nmédio", "TAM\nmáx.", "TAM\nmín.",
-        "Ampl.", "Vel.\nméd.", "Vel.\npico", "Freq.", "Reg.", "ASSH",
+        "Ampl.", "Vel.\nméd.", "Vel.\npico", "Freq.", "Reg.", "Articular",
     ]
     col_widths = [22, 15, 15, 15, 15, 15, 15, 15, 14, 17, 18]
 
@@ -772,7 +740,7 @@ def _add_main_table(
             f"{s['vel_pico']:.0f}°/s",
             f"{s['freq_hz']:.2f}Hz",
             s["regularidade"],
-            s["assh_label"],
+            s["articular_class"]["label"],
         ]
 
         for i, val in enumerate(values):
@@ -791,7 +759,68 @@ def _add_main_table(
         pdf.ln(row_h)
 
     pdf.ln(3)
+def _hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
+def _add_functional_blocks(pdf: _ReportPDF, summary: Dict[str, Dict[str, Any]]) -> None:
+    """Adiciona blocos explicativos de classificação por dedo."""
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_text_color(40, 40, 50)
+    pdf.cell(0, 7, "Avaliação Funcional Híbrida", ln=True)
+    pdf.ln(2)
+
+    for idx, finger in enumerate(FINGERS):
+        s = summary.get(finger, _empty_finger_summary(finger))
+        
+        pdf.set_fill_color(248, 248, 252) if idx % 2 == 0 else pdf.set_fill_color(255, 255, 255)
+        pdf.rect(10, pdf.get_y(), 190, 24, style="F")
+
+        # Cabeçalho do dedo
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(30, 30, 40)
+        pdf.cell(0, 5, f" {FINGER_LABELS[finger]}:", ln=True)
+        
+        # Itens
+        pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(50, 50, 60)
+        
+        # Articular
+        pdf.cell(5, 4, "")
+        pdf.cell(55, 4, "Classificação articular (TAM):")
+        pdf.set_font("Helvetica", "B", 8)
+        color_art = _hex_to_rgb(s["articular_class"]["color"])
+        pdf.set_text_color(*color_art)
+        pdf.cell(0, 4, s["articular_class"]["label"], ln=True)
+        
+        # Funcional
+        pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(50, 50, 60)
+        pdf.cell(5, 4, "")
+        pdf.cell(55, 4, "Classificação funcional da sessão:")
+        pdf.set_font("Helvetica", "B", 8)
+        color_func = _hex_to_rgb(s["functional_class"]["color"])
+        pdf.set_text_color(*color_func)
+        pdf.cell(0, 4, s["functional_class"]["label"], ln=True)
+
+        # Híbrida
+        pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(50, 50, 60)
+        pdf.cell(5, 4, "")
+        pdf.cell(55, 4, "Classificação final híbrida:")
+        pdf.set_font("Helvetica", "B", 8)
+        color_hyb = _hex_to_rgb(s["hybrid_class"]["color"])
+        pdf.set_text_color(*color_hyb)
+        pdf.cell(0, 4, s["hybrid_class"]["label"], ln=True)
+
+        # Justificativa
+        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_text_color(80, 80, 90)
+        pdf.cell(5, 4, "")
+        pdf.multi_cell(0, 4, f"Justificativa: {s['hybrid_class']['explanation']}")
+        pdf.ln(3)
+
+    pdf.ln(3)
 
 def _add_complementary_table(
     pdf: _ReportPDF,
@@ -844,14 +873,20 @@ def _add_legend(pdf: _ReportPDF) -> None:
     legends = [
         ("TAM (Total Active Motion)",
          "Soma da mobilidade ativa das articulações principais do dedo, usada como indicador global de movimento funcional."),
+        ("TAM do Polegar",
+         "Soma de MCP e IP do polegar. Máximo anatômico ~120°. A classificação ASSH é adaptada proporcionalmente."),
         ("MCP (Metacarpofalângica)",
          "Articulação na base do dedo."),
         ("PIP (Interfalângica Proximal)",
          "Articulação intermediária do dedo."),
         ("DIP (Interfalângica Distal)",
          "Articulação próxima à ponta do dedo."),
+        ("IP (Interfalângica do Polegar)",
+         "Articulação entre as falanges do polegar (equivalente à DIP dos dedos longos)."),
         ("ASSH",
-         "Classificação funcional baseada na amplitude total ativa do dedo: Excelente (>=260°), Bom (195-259°), Moderado (130-194°), Ruim (<130°)."),
+         "Classificação funcional (dedos longos): Excelente (>=260°), Bom (195-259°), Moderado (130-194°), Ruim (<130°)."),
+        ("ASSH (Polegar)",
+         "Classificação funcional adaptada (polegar): Excelente (>=110°), Bom (80-109°), Moderado (50-79°), Ruim (<50°)."),
         ("TAM final",
          "Valor de mobilidade total do dedo no fim da sessão."),
         ("TAM médio",
@@ -966,6 +1001,9 @@ def generate_pdf_report(
 
     # Tabela principal
     _add_main_table(pdf, summary)
+
+    # Blocos funcionais
+    _add_functional_blocks(pdf, summary)
 
     # Tabela complementar
     _add_complementary_table(pdf, summary)

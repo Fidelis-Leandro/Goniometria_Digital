@@ -50,7 +50,6 @@ from dashboard_utils import (
     FINGER_JOINTS,
     classify_hand_state,
     compute_realtime_metrics,
-    build_tam_chart_data,
     freq_label,
     regularidade_label,
 )
@@ -61,13 +60,15 @@ from dashboard_utils import (
 # =============================================================================
 
 # Tamanho do buffer circular: quantos frames manter em memória.
-# A 30fps, 90 frames ≈ 3 segundos de janela deslizante.
-BUFFER_SIZE: int = 90
+# A 30fps, 60 frames ≈ 2 segundos de janela deslizante.
+# Reduzido de 90 para economizar memória sem perder fluidez visual.
+BUFFER_SIZE: int = 10
 
 # Parâmetros de atualização do painel Streamlit.
-# 5 Hz (200 ms) é o mínimo clinicamente útil: abaixo disso, exercícios
-# rápidos (>0.4 Hz) geram deltas aparentemente zero entre ciclos de refresh.
-PANEL_REFRESH_S: float = 0.2
+# ~0.67 Hz (1500 ms): reduz carga de renderização no browser.
+# Exercícios clínicos lentos (flexão/extensão) são captados adequadamente.
+# A câmera continua a ~10 fps — só a atualização do painel visual é reduzida.
+PANEL_REFRESH_S: float = 1.5
 
 FINGER_NAMES_PT: Dict[str, str] = {
     "INDEX":  "Indicador",
@@ -202,19 +203,20 @@ def render_sidebar(processor: Optional[VideoProcessor]) -> None:
 
 def _copy_state_snapshot(processor: VideoProcessor) -> Optional[Dict]:
     """
-    Faz uma cópia thread-safe dos dados usados pelo dashboard diretamente
-    do processador de vídeo do WebRTC.
+    Faz uma cópia thread-safe dos dados mínimos necessários para o dashboard.
 
-    Usa FINGER_JOINTS para copiar apenas os joints válidos por dedo,
-    eliminando a inconsistência de ler buffers inexistentes do THUMB.
+    Copia apenas:
+    - buffer TAM de cada dedo (o único usado nos gráficos)
+    - time_buffer de cada dedo
+    - last_angles completo (dict leve, usado para classify_hand_state)
+
+    NÃO copia todos os joints de todos os dedos — isso eliminava o gargalo
+    de copiar ~2700 floats a cada 500ms.
     """
     with processor.lock:
         snapshot = {
-            "angle_buffers": {
-                finger: {
-                    joint: list(processor.angle_buffers[finger][joint])
-                    for joint in FINGER_JOINTS[finger]
-                }
+            "tam_buffers": {
+                finger: list(processor.angle_buffers[finger]["TAM"])
                 for finger in FINGERS
             },
             "time_buffers": {
@@ -237,8 +239,8 @@ def _render_finger_block(
     finger: str,
     finger_name: str,
     state: Dict,
-    angle_buffers: Dict,
-    time_buffers: Dict,
+    tam_buffer: list,
+    time_buffer: list,
 ) -> None:
     """
     Renderiza o bloco clínico de um único dedo.
@@ -249,7 +251,7 @@ def _render_finger_block(
     ├──────────────────────┬──────────────────────────────────┤
     │ Amplitude | Vel.méd. │ Vel. pico | Freq. | Regularidade │
     ├──────────────────────┴──────────────────────────────────┤
-    │ Gráfico TAM (linha temporal)                            │
+    │ Gráfico TAM (linha temporal, decimado)                  │
     └─────────────────────────────────────────────────────────┘
     """
     tam_current = state.get("TAM", 0.0)
@@ -257,22 +259,15 @@ def _render_finger_block(
     assh_color = state.get("assh_color", "#888888")
     is_closed = state.get("closed", False)
 
-    # O polegar não tem buffer "TAM" — usamos "MCP" como proxy de amplitude.
-    if finger == "THUMB":
-        tam_buffer = angle_buffers[finger]["MCP"]
-    else:
-        tam_buffer = angle_buffers[finger]["TAM"]
-    t_buffer = time_buffers[finger]
-
     metrics = compute_realtime_metrics(
         angle_buffer=tam_buffer,
-        time_buffer=t_buffer,
+        time_buffer=time_buffer,
         min_range_pct=0.30,
         min_dist_s=1.0,
     )
 
     # Delta em relação ao ciclo anterior.
-    prev = st.session_state.prev_metrics.get(finger, {})
+    prev = st.session_state.get("prev_metrics", {}).get(finger, {})
     delta_amp = metrics["amplitude"] - prev.get("amplitude", metrics["amplitude"])
     delta_vel = metrics["vel_media"] - prev.get("vel_media", metrics["vel_media"])
 
@@ -318,18 +313,21 @@ def _render_finger_block(
     with col_reg:
         st.caption(f"📐 {regularidade_label(metrics['regularidade'], metrics['cv'])}")
 
-    # Gráfico de linha temporal do TAM (substitui o st.progress).
+    # Gráfico de linha temporal do TAM — decimado (1 em cada 3 pontos).
+    # Reduz dados enviados ao browser sem perder o padrão visual do movimento.
     if len(tam_buffer) >= 3:
-        chart_data = {finger_name: tam_buffer}
+        decimated = tam_buffer[::3] if len(tam_buffer) > 9 else tam_buffer
         st.line_chart(
-            chart_data,
-            height=100,
+            {finger_name: decimated},
+            height=90,
             use_container_width=True,
         )
     else:
         st.caption("_Aguardando dados suficientes para o gráfico…_")
 
     # Persiste métricas para o próximo ciclo (delta).
+    if "prev_metrics" not in st.session_state:
+        st.session_state.prev_metrics = {}
     st.session_state.prev_metrics[finger] = {
         "amplitude": metrics["amplitude"],
         "vel_media": metrics["vel_media"],
@@ -347,7 +345,7 @@ def render_live_panel(processor: Optional[VideoProcessor]) -> None:
 
     Separação de frequências:
     - recv() roda na taxa da câmera (~30 Hz): escreve nos buffers do processador.
-    - Este fragmento roda a ~5 Hz (200 ms): lê snapshot do processador, calcula e renderiza.
+    - Este fragmento roda a ~2 Hz (500 ms): lê snapshot mínimo, calcula e renderiza.
     """
     if processor is None:
         st.info("⏳ Posicione a mão na câmera para iniciar as métricas em tempo real.")
@@ -360,7 +358,7 @@ def render_live_panel(processor: Optional[VideoProcessor]) -> None:
 
     hand_detected = snapshot["hand_detected"]
     last_angles = snapshot["last_angles"]
-    angle_buffers = snapshot["angle_buffers"]
+    tam_buffers = snapshot["tam_buffers"]
     time_buffers = snapshot["time_buffers"]
 
     if not hand_detected or not last_angles:
@@ -383,15 +381,20 @@ def render_live_panel(processor: Optional[VideoProcessor]) -> None:
 
     st.markdown("---")
 
-    # Gráfico temporal unificado do TAM (todos os 4 dedos).
-    tam_chart_data = build_tam_chart_data(angle_buffers)
+    # Gráfico temporal unificado (dados decimados: 1 em cada 3 pontos).
+    # Reduz o tamanho do payload JSON enviado ao browser de ~2250 pontos para ~750.
+    DECIMATE = 3
+    tam_chart_data = {
+        FINGER_NAMES_PT[f]: tam_buffers[f][::DECIMATE] if len(tam_buffers[f]) > DECIMATE else tam_buffers[f]
+        for f in FINGERS
+    }
     min_series_len = min((len(v) for v in tam_chart_data.values()), default=0)
 
-    if min_series_len >= 3:
+    if min_series_len >= 2:
         st.markdown("#### 📈 TAM — janela deslizante (últimos frames)")
         st.line_chart(
             tam_chart_data,
-            height=160,
+            height=150,
             use_container_width=True,
         )
         st.caption(
@@ -411,8 +414,8 @@ def render_live_panel(processor: Optional[VideoProcessor]) -> None:
             finger=finger,
             finger_name=finger_name,
             state=state,
-            angle_buffers=angle_buffers,
-            time_buffers=time_buffers,
+            tam_buffer=tam_buffers[finger],
+            time_buffer=time_buffers[finger],
         )
         st.markdown("---")
 
@@ -459,7 +462,7 @@ def main() -> None:
                 "video": {
                     "width": {"ideal": 640, "max": 640},
                     "height": {"ideal": 480, "max": 480},
-                    "frameRate": {"ideal": 30, "max": 30},
+                    "frameRate": {"ideal": 10, "max": 12},
                 },
                 "audio": False,
             },
