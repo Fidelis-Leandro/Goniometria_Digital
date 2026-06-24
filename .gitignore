@@ -24,3 +24,5 @@ Thumbs.db
 
 *.pdf
 unicode_issues.txt
+
+logs/
