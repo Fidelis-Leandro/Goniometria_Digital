@@ -259,3 +259,19 @@ AttributeError: 'LogWidget' object has no attribute 'log_info'
 2026-06-23 15:01:55,830 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_richard_20260623_150051_s1.csv
 2026-06-23 15:15:45,662 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
 2026-06-23 15:15:45,832 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 21:30:59,697 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 21:31:03,047 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 21:31:03,381 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 21:31:36,783 | INFO | ui.main_window | Sessão iniciada: paciente=a, mão=Direita, sessão=1, csv=logs\sessao_a_20260623_213136_s1.csv
+2026-06-23 21:33:08,918 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_a_20260623_213136_s1.csv
+2026-06-23 21:33:12,337 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 21:33:12,446 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.
+2026-06-23 21:34:07,596 | INFO | app_pyqt | Inicializando Goniometria Digital (Interface PyQt6)...
+2026-06-23 21:34:08,562 | INFO | ui.main_window | MainWindow inicializada com sucesso.
+2026-06-23 21:34:08,698 | INFO | app_pyqt | Interface iniciada com sucesso. Loop de eventos Qt ativo.
+2026-06-23 21:34:21,029 | INFO | ui.main_window | Sessão iniciada: paciente=a, mão=Direita, sessão=1, csv=logs\sessao_a_20260623_213421_s1.csv
+2026-06-23 21:34:22,141 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_a_20260623_213421_s1.csv
+2026-06-23 21:34:26,976 | INFO | ui.main_window | Sessão iniciada: paciente=a, mão=Direita, sessão=1, csv=logs\sessao_a_20260623_213426_s1.csv
+2026-06-23 21:34:43,005 | INFO | ui.main_window | Sessão encerrada. CSV: logs\sessao_a_20260623_213426_s1.csv
+2026-06-23 21:34:49,075 | INFO | ui.main_window | closeEvent: encerrando workers antes de fechar.
+2026-06-23 21:34:49,146 | INFO | ui.main_window | closeEvent: workers encerrados. Fechando janela.

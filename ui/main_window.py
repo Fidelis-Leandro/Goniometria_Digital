@@ -632,6 +632,17 @@ class MainWindow(QMainWindow):
     def _nova_sessao(self) -> None:
         """
         Zera completamente o estado do sistema e prepara a interface para um novo paciente.
+
+        Por que recriar os workers em vez de apenas resetar?
+            QThread em Qt tem um ciclo de vida unidirecional: uma vez que run()
+            retorna e a thread termina, o objeto QThread não pode ser reiniciado
+            com start() novamente. Além disso, _cleanup() no ProcessingWorker
+            fecha o MediaPipe (self._hands.close()), e _release_camera() no
+            CameraWorker libera o cv2.VideoCapture. Esses recursos precisam ser
+            recriados do zero para uma nova sessão funcionar.
+
+            A solução segura é: destruir os workers antigos, criar novos e
+            reconectar todos os sinais.
         """
         if self._state == "RUNNING":
             QMessageBox.warning(self, "Aviso", "Encerre a sessão atual primeiro antes de iniciar uma nova.")
@@ -650,23 +661,38 @@ class MainWindow(QMainWindow):
         if resp != QMessageBox.StandardButton.Yes:
             return
 
-        # 1. Zera o processamento em background
-        self.processing_worker.reset_state()
-        
-        # 2. Zera as métricas na interface
+        # === 1. Garantir que os workers antigos estão totalmente parados ===
+        if self.camera_worker.isRunning():
+            self.camera_worker.stop()
+            self.camera_worker.wait(3000)
+
+        if self.processing_worker.isRunning():
+            self.processing_worker.stop()
+            self.processing_worker.wait(3000)
+
+        # === 2. Recriar workers do zero (novos objetos QThread) ===
+        self._create_workers()
+
+        # === 3. Reconectar todos os sinais com os novos workers ===
+        self._connect_signals()
+
+        # === 4. Limpar todos os widgets da interface ===
+        self.video_widget.set_no_signal("Aguardando nova sessão...")
         self.plot_widget.clear_data()
         self.finger_cards.clear_all()
         self.metrics_widget.reset_display()
+        self.metrics_widget.stop_monitoring()
         self.session_header.reset()
-        
-        # 3. Zera o histórico e exibe confirmação
+
+        # === 5. Limpar o log e exibir confirmação ===
         self.log_widget.clear_log()
         self.log_widget.log_success("Sistema reiniciado. Pronto para uma nova sessão.")
-        
-        # 4. Remove a referência do último CSV
+
+        # === 6. Zerar referências de sessão ===
         self._csv_path = ""
-        
-        # 5. Reavalia o estado: se o nome do paciente foi mantido, já fica READY
+        self._pdf_worker = None
+
+        # === 7. Reavalia o estado ===
         if self.session_header.is_ready():
             self._set_state("READY")
         else:
