@@ -179,18 +179,6 @@ pip install -r requirements.txt
 python app_pyqt.py
 ```
 
-### Interface Web (Streamlit) — Legado
-
-```bash
-streamlit run app.py
-```
-
-### Fallback OpenCV (modo teste / sem GUI)
-
-```bash
-python main.py
-```
-
 ---
 
 ## Estrutura do Projeto
