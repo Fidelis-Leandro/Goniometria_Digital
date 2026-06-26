@@ -1,5 +1,9 @@
 # Goniometria Digital da Mao
 
+<div align="center">
+  <img src="screenshot.png" alt="Interface Goniometria Digital" width="800"/>
+</div>
+
 > **Sistema de mensuracao goniometrica em tempo real para avaliacao funcional dos dedos da mao, utilizando visao computacional e interface desktop.**
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
